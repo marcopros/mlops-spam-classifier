@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from pathlib import Path
 
 import joblib
@@ -104,20 +105,30 @@ def run_training(data_path: str, model_dir: str, metrics_dir: str, model_version
     save_artifacts(model, metrics, model_dir, metrics_dir, model_version)
 
     if mlflow is not None:
-        mlflow.set_experiment("spam-classifier")
-        with mlflow.start_run(run_name=model_version):
-            mlflow.log_params({
-                "model_version": model_version,
-                "data_path": data_path,
-                "test_size": 0.2,
-                "ngram_range": "1,2",
-                "class_weight": "balanced",
-                "C": 5.0,
-                "train_samples": len(X_train),
-                "test_samples": len(X_test),
-            })
-            mlflow.log_metrics(metrics)
-            mlflow.sklearn.log_model(model, name="model")
+        # Default to a writable local tracking store unless the user explicitly configured one.
+        if not os.getenv("MLFLOW_TRACKING_URI"):
+            tracking_dir = Path(".mlflow") / "tracking"
+            tracking_dir = tracking_dir.resolve()
+            tracking_dir.mkdir(parents=True, exist_ok=True)
+            mlflow.set_tracking_uri(tracking_dir.as_uri())
+
+        try:
+            mlflow.set_experiment("spam-classifier")
+            with mlflow.start_run(run_name=model_version):
+                mlflow.log_params({
+                    "model_version": model_version,
+                    "data_path": data_path,
+                    "test_size": 0.2,
+                    "ngram_range": "1,2",
+                    "class_weight": "balanced",
+                    "C": 5.0,
+                    "train_samples": len(X_train),
+                    "test_samples": len(X_test),
+                })
+                mlflow.log_metrics(metrics)
+                mlflow.sklearn.log_model(model, name="model")
+        except Exception as exc:
+            print(f"Warning: MLflow logging skipped due to error: {exc}")
 
     return metrics
 
