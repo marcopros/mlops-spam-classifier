@@ -22,7 +22,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Train model
-        run: python -m src.train --data-path data/spam.csv --model-version ci
+        run: python -m src.train --data-path data/spam.csv --model-version ci --text-col v2 --label-col v1
 
       - name: Run tests
         run: pytest -q
