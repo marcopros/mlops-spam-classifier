@@ -12,6 +12,8 @@ def test_run_training_creates_artifacts(tmp_path: Path) -> None:
         model_dir=str(model_dir),
         metrics_dir=str(metrics_dir),
         model_version="test",
+        text_col="v2",
+        label_col="v1",
     )
 
     assert "accuracy" in metrics
