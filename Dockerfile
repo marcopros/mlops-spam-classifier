@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Train a default model at build time so API can serve immediately.
-RUN python -m src.train --data-path data/spam.csv --model-version v1
+RUN python -m src.train --data-path data/spam.csv --model-version v1 --text-col v2 --label-col v1
 
 EXPOSE 10000
 
