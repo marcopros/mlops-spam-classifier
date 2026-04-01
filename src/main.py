@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.model_utils import ModelService, log_prediction
-from src.schemas import PredictRequest, PredictResponse
+from src.schemas import BatchPredictRequest, BatchPredictResponse, PredictRequest, PredictResponse
 
 MODEL_PATH = os.getenv("MODEL_PATH", "models/model_latest.joblib")
 PREDICTIONS_LOG_PATH = os.getenv("PREDICTIONS_LOG_PATH", "logs/predictions.jsonl")
@@ -38,3 +38,14 @@ def predict(request: PredictRequest) -> PredictResponse:
     result = model_service.predict(request.text)
     log_prediction(request.text, result, PREDICTIONS_LOG_PATH)
     return PredictResponse(**result)
+
+
+@app.post("/predict/batch", response_model=BatchPredictResponse)
+def predict_batch(request: BatchPredictRequest) -> BatchPredictResponse:
+    if not model_service.is_ready():
+        raise HTTPException(status_code=503, detail="Model not loaded. Run training first.")
+
+    results = model_service.predict_batch(request.texts)
+    for text, result in zip(request.texts, results, strict=True):
+        log_prediction(text, result, PREDICTIONS_LOG_PATH)
+    return BatchPredictResponse(results=[PredictResponse(**r) for r in results])

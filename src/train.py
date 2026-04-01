@@ -10,6 +10,11 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
+try:
+    import mlflow
+except ImportError:
+    mlflow = None
+
 
 def load_dataset(data_path: str, text_col: str = "text", label_col: str = "label") -> pd.DataFrame:
     df = pd.read_csv(data_path, usecols=[text_col, label_col], encoding="latin-1")
@@ -35,8 +40,19 @@ def normalize_labels(labels: pd.Series) -> pd.Series:
 def train_pipeline(X_train: pd.Series, y_train: pd.Series) -> Pipeline:
     pipeline = Pipeline(
         [
-            ("tfidf", TfidfVectorizer(stop_words="english", ngram_range=(1, 2))),
-            ("clf", LogisticRegression(max_iter=1000, random_state=42)),
+            ("tfidf", TfidfVectorizer(
+                stop_words="english",
+                ngram_range=(1, 2),
+                sublinear_tf=True,
+                min_df=2,
+                max_features=20000,
+            )),
+            ("clf", LogisticRegression(
+                max_iter=1000,
+                random_state=42,
+                class_weight="balanced",
+                C=5.0,
+            )),
         ]
     )
     pipeline.fit(X_train, y_train)
@@ -86,6 +102,23 @@ def run_training(data_path: str, model_dir: str, metrics_dir: str, model_version
     model = train_pipeline(X_train, y_train)
     metrics = evaluate(model, X_test, y_test)
     save_artifacts(model, metrics, model_dir, metrics_dir, model_version)
+
+    if mlflow is not None:
+        mlflow.set_experiment("spam-classifier")
+        with mlflow.start_run(run_name=model_version):
+            mlflow.log_params({
+                "model_version": model_version,
+                "data_path": data_path,
+                "test_size": 0.2,
+                "ngram_range": "1,2",
+                "class_weight": "balanced",
+                "C": 5.0,
+                "train_samples": len(X_train),
+                "test_samples": len(X_test),
+            })
+            mlflow.log_metrics(metrics)
+            mlflow.sklearn.log_model(model, artifact_path="model")
+
     return metrics
 
 
