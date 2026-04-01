@@ -31,7 +31,7 @@ def test_root_endpoint() -> None:
     client = TestClient(main.app)
     response = client.get("/")
     assert response.status_code == 200
-    assert "message" in response.json()
+    assert "text/html" in response.headers["content-type"]
 
 
 def test_predict_requires_loaded_model() -> None:
