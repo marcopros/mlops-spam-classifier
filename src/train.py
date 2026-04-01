@@ -117,7 +117,7 @@ def run_training(data_path: str, model_dir: str, metrics_dir: str, model_version
                 "test_samples": len(X_test),
             })
             mlflow.log_metrics(metrics)
-            mlflow.sklearn.log_model(model, artifact_path="model")
+            mlflow.sklearn.log_model(model, name="model")
 
     return metrics
 
